@@ -1,0 +1,606 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserRole {
+  student
+  teacher
+  subject_lead
+  admin
+}
+
+enum Subject {
+  english
+  japanese
+}
+
+enum GradeType {
+  new_words
+  review
+  complete
+}
+
+enum ClassStudentStatus {
+  active
+  transferred
+  suspended
+  graduated
+}
+
+enum TeacherAssignmentRole {
+  homeroom
+  subject_teacher
+}
+
+enum QuizMode {
+  morning_test
+  quick
+  weakness
+  promotion
+}
+
+enum QuizDeliveryStatus {
+  scheduled
+  active
+  closed
+  cancelled
+}
+
+enum QuestionDirection {
+  en_to_ja
+  ja_to_en
+  meaning_to_word
+}
+
+enum StreakDayStatus {
+  attended
+  freeze_used
+  excused
+  missed
+  vacation
+  skipped
+}
+
+enum DayType {
+  school_day
+  weekend
+  holiday
+  vacation
+  exam_period
+  special
+}
+
+enum BadgeCategory {
+  continuity
+  achievement
+  growth
+}
+
+enum SemesterGoalStatus {
+  in_progress
+  achieved
+  not_achieved
+}
+
+enum AlertSeverity {
+  high
+  medium
+  low
+}
+
+// ============================================================
+// Auth.js required models
+// ============================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// User & Organization
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  nameKana      String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(student)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts              Account[]
+  sessions              Session[]
+  classStudents         ClassStudent[]
+  homeroomClasses       Class[]                  @relation("HomeroomTeacher")
+  teacherAssignments    TeacherClassAssignment[]
+  studentGrades         StudentGrade[]
+  quizAttempts          QuizAttempt[]
+  promotionProgresses   PromotionProgress[]
+  studentStreak         StudentStreak?
+  streakDailyLogs       StreakDailyLog[]
+  reviewItems           ReviewItem[]
+  studentBadges         StudentBadge[]
+  studentBadgeReveals   StudentBadgeReveal[]
+  semesterGoals         SemesterGoal[]
+  notifications         Notification[]
+  notificationSetting   NotificationSetting?
+  teacherAlertsAsTeacher TeacherAlert[]          @relation("AlertTeacher")
+  teacherAlertsAsStudent TeacherAlert[]          @relation("AlertStudent")
+  teacherNotesAsTeacher  TeacherNote[]           @relation("NoteTeacher")
+  teacherNotesAsStudent  TeacherNote[]           @relation("NoteStudent")
+
+  @@map("users")
+}
+
+model Class {
+  id                String  @id @default(cuid())
+  academicYear      Int
+  gradeYear         Int // 1-3
+  className         String
+  homeroomTeacherId String?
+
+  homeroomTeacher    User?                   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+  classStudents      ClassStudent[]
+  teacherAssignments TeacherClassAssignment[]
+
+  @@unique([academicYear, gradeYear, className])
+  @@map("classes")
+}
+
+model ClassStudent {
+  id            String             @id @default(cuid())
+  classId       String
+  studentId     String
+  studentNumber Int
+  status        ClassStudentStatus @default(active)
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@unique([classId, studentNumber])
+  @@map("class_students")
+}
+
+model TeacherClassAssignment {
+  id        String                @id @default(cuid())
+  teacherId String
+  classId   String
+  role      TeacherAssignmentRole
+  subject   Subject?
+
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId, role])
+  @@map("teacher_class_assignments")
+}
+
+// ============================================================
+// Grade & Vocabulary
+// ============================================================
+
+model Grade {
+  id              String    @id // E1-E48, J1-J20
+  subject         Subject
+  gradeNumber     Int
+  gradeType       GradeType
+  wordStart       Int
+  wordEnd         Int
+  reviewRangeStart Int?
+  reviewRangeEnd   Int?
+  blockNumber     Int
+
+  words               Word[]
+  studentGrades       StudentGrade[]
+  quizAttempts        QuizAttempt[]
+  promotionProgresses PromotionProgress[]
+  reviewItems         ReviewItem[]
+  semesterGoals       SemesterGoal[]
+
+  @@unique([subject, gradeNumber])
+  @@map("grades")
+}
+
+model Word {
+  id           String   @id @default(cuid())
+  wordNumber   Int
+  subject      Subject
+  word         String
+  meaning      String
+  partOfSpeech String?
+  gradeId      String
+  categoryTags String[] @default([])
+
+  grade       Grade        @relation(fields: [gradeId], references: [id])
+  quizAnswers QuizAnswer[]
+  reviewItems ReviewItem[]
+
+  @@unique([subject, wordNumber])
+  @@index([gradeId])
+  @@map("words")
+}
+
+model StudentGrade {
+  id             String   @id @default(cuid())
+  studentId      String
+  subject        Subject
+  currentGradeId String
+  promotedAt     DateTime?
+  updatedAt      DateTime @updatedAt
+
+  student      User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  currentGrade Grade @relation(fields: [currentGradeId], references: [id])
+
+  @@unique([studentId, subject])
+  @@map("student_grades")
+}
+
+// ============================================================
+// Quiz & Assessment
+// ============================================================
+
+model QuizSchedule {
+  id              String  @id @default(cuid())
+  academicYear    Int
+  semester        Int
+  dayOfWeek       Int // 0=Sunday, 6=Saturday
+  subject         Subject
+  deliveryTime    String // HH:mm format
+  deadlineMinutes Int     @default(15)
+  isActive        Boolean @default(true)
+
+  @@unique([academicYear, semester, dayOfWeek, subject])
+  @@map("quiz_schedules")
+}
+
+model QuizDelivery {
+  id           String             @id @default(cuid())
+  date         DateTime           @db.Date
+  subject      Subject
+  deliveryTime DateTime
+  deadlineTime DateTime
+  status       QuizDeliveryStatus @default(scheduled)
+  createdAt    DateTime           @default(now())
+
+  quizAttempts QuizAttempt[]
+
+  @@unique([date, subject])
+  @@index([status])
+  @@map("quiz_deliveries")
+}
+
+model QuizAttempt {
+  id              String    @id @default(cuid())
+  deliveryId      String?
+  studentId       String
+  gradeId         String
+  mode            QuizMode
+  startedAt       DateTime  @default(now())
+  submittedAt     DateTime?
+  score           Int?
+  scorePercentage Float?
+  isPassed        Boolean?
+  isSuspended     Boolean   @default(false)
+  sessionState    Json?
+
+  delivery QuizDelivery? @relation(fields: [deliveryId], references: [id])
+  student  User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grade    Grade         @relation(fields: [gradeId], references: [id])
+  answers  QuizAnswer[]
+
+  @@index([studentId, mode])
+  @@index([deliveryId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id                String            @id @default(cuid())
+  attemptId         String
+  wordId            String
+  questionDirection QuestionDirection
+  correctOption     String
+  selectedOption    String?
+  allOptions        String[]
+  isCorrect         Boolean?
+  hintUsed          Boolean           @default(false)
+  timeSpentMs       Int?
+  answeredAt        DateTime?
+
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  word    Word        @relation(fields: [wordId], references: [id])
+
+  @@index([attemptId])
+  @@map("quiz_answers")
+}
+
+// ============================================================
+// Promotion & Streak
+// ============================================================
+
+model PromotionProgress {
+  id               String    @id @default(cuid())
+  studentId        String
+  subject          Subject
+  targetGradeId    String
+  consecutivePasses Int       @default(0)
+  lastPassAt       DateTime?
+  attemptsToday    Int        @default(0)
+  updatedAt        DateTime   @updatedAt
+
+  student     User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  targetGrade Grade @relation(fields: [targetGradeId], references: [id])
+
+  @@unique([studentId, subject])
+  @@map("promotion_progresses")
+}
+
+model StudentStreak {
+  id                  String    @id @default(cuid())
+  studentId           String    @unique
+  currentStreak       Int       @default(0)
+  maxStreak           Int       @default(0)
+  freezeRemaining     Int       @default(3)
+  revivalRemaining    Int       @default(2)
+  lastActivityDate    DateTime? @db.Date
+  streakStartDate     DateTime? @db.Date
+  flameLevel          Int       @default(0) // 0-5
+  vacationFrozenStreak Int?
+  updatedAt           DateTime  @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_streaks")
+}
+
+model StreakDailyLog {
+  id               String        @id @default(cuid())
+  studentId        String
+  date             DateTime      @db.Date
+  status           StreakDayStatus
+  streakCountAfter Int
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@map("streak_daily_logs")
+}
+
+// ============================================================
+// Review (Leitner System)
+// ============================================================
+
+model ReviewItem {
+  id              String    @id @default(cuid())
+  studentId       String
+  wordId          String
+  subject         Subject
+  gradeId         String
+  leitnerLevel    Int       @default(0) // 0-5
+  nextReviewDate  DateTime  @db.Date
+  totalAttempts   Int       @default(0)
+  correctCount    Int       @default(0)
+  wrongCount      Int       @default(0)
+  lastWrongAnswer String?
+  graduatedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  word    Word  @relation(fields: [wordId], references: [id])
+  grade   Grade @relation(fields: [gradeId], references: [id])
+
+  @@unique([studentId, wordId])
+  @@index([studentId, subject, nextReviewDate])
+  @@map("review_items")
+}
+
+// ============================================================
+// Badge & Achievement
+// ============================================================
+
+model BadgeMaster {
+  id              String        @id @default(cuid())
+  name            String
+  description     String
+  category        BadgeCategory
+  iconKey         String
+  difficulty      Int // 1-5
+  conditionType   String
+  conditionValue  Int
+  conditionDetail Json?
+  phase           Int           @default(1)
+  revealCondition String?
+  sortOrder       Int
+
+  studentBadges       StudentBadge[]
+  studentBadgeReveals StudentBadgeReveal[]
+
+  @@map("badge_masters")
+}
+
+model StudentBadge {
+  id         String   @id @default(cuid())
+  studentId  String
+  badgeId    String
+  earnedAt   DateTime @default(now())
+  isNotified Boolean  @default(false)
+
+  student User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge   BadgeMaster @relation(fields: [badgeId], references: [id])
+
+  @@unique([studentId, badgeId])
+  @@map("student_badges")
+}
+
+model StudentBadgeReveal {
+  id         String   @id @default(cuid())
+  studentId  String
+  badgeId    String
+  revealedAt DateTime @default(now())
+
+  student User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge   BadgeMaster @relation(fields: [badgeId], references: [id])
+
+  @@unique([studentId, badgeId])
+  @@map("student_badge_reveals")
+}
+
+// ============================================================
+// Calendar & Semester
+// ============================================================
+
+model SchoolCalendar {
+  id              String  @id @default(cuid())
+  date            DateTime @unique @db.Date
+  dayType         DayType
+  hasMorningTest  Boolean @default(false)
+  streakRequired  Boolean @default(false)
+  note            String?
+
+  @@map("school_calendars")
+}
+
+model Semester {
+  id           String   @id @default(cuid())
+  academicYear Int
+  term         Int // 1, 2, 3
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+
+  semesterGoals SemesterGoal[]
+
+  @@unique([academicYear, term])
+  @@map("semesters")
+}
+
+model SemesterGoal {
+  id           String             @id @default(cuid())
+  studentId    String
+  semesterId   String
+  subject      Subject
+  targetGradeId String
+  status       SemesterGoalStatus @default(in_progress)
+
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester    Semester @relation(fields: [semesterId], references: [id])
+  targetGrade Grade    @relation(fields: [targetGradeId], references: [id])
+
+  @@unique([studentId, semesterId, subject])
+  @@map("semester_goals")
+}
+
+// ============================================================
+// Notification & Alert
+// ============================================================
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  body       String   @db.Text
+  isRead     Boolean  @default(false)
+  isPushSent Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model NotificationSetting {
+  userId              String  @id
+  pushTestDelivery    Boolean @default(true)
+  pushTestReminder    Boolean @default(true)
+  pushStreakWarning   Boolean @default(true)
+  emailDailySummary   Boolean @default(true)
+  emailWeeklyReport   Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model TeacherAlert {
+  id              String        @id @default(cuid())
+  teacherId       String
+  studentId       String
+  alertType       String
+  severity        AlertSeverity
+  message         String        @db.Text
+  isAcknowledged  Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  teacher User @relation("AlertTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student User @relation("AlertStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, isAcknowledged])
+  @@map("teacher_alerts")
+}
+
+model TeacherNote {
+  id        String   @id @default(cuid())
+  teacherId String
+  studentId String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher User @relation("NoteTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student User @relation("NoteStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, studentId])
+  @@map("teacher_notes")
+}
