@@ -38,6 +38,24 @@ async function main() {
   }
   console.log(`Seeded ${words.length} sample words.`);
 
+  // Seed dev users (one per role)
+  const devUsers = [
+    { email: "admin@dev.local", name: "管理者 太郎", role: "admin" as const },
+    { email: "teacher@dev.local", name: "教員 花子", role: "teacher" as const },
+    { email: "lead@dev.local", name: "教科主任 次郎", role: "subject_lead" as const },
+    { email: "student@dev.local", name: "生徒 三郎", role: "student" as const },
+  ];
+
+  console.log(`Seeding ${devUsers.length} dev users...`);
+  for (const u of devUsers) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: { name: u.name, role: u.role },
+      create: { email: u.email, name: u.name, role: u.role },
+    });
+  }
+  console.log(`Seeded ${devUsers.length} dev users.`);
+
   // Seed initial badge masters
   const badges = [
     { name: "はじめの一歩", description: "初めてのクイズを完了", category: "continuity" as const, iconKey: "footprints", difficulty: 1, conditionType: "first_quiz", conditionValue: 1, phase: 1, sortOrder: 1 },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserMenu } from "./UserMenu";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import type { UserRole } from "@/generated/prisma/client";
 
@@ -28,6 +28,7 @@ export function Header({ user, sidebarContent }: HeaderProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
+              <SheetTitle className="sr-only">ナビゲーションメニュー</SheetTitle>
               {sidebarContent}
             </SheetContent>
           </Sheet>

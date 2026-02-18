@@ -28,7 +28,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
+      if (account?.provider === "dev-login") return true;
+
       const allowedDomain = process.env.ALLOWED_DOMAIN;
       if (!allowedDomain) return true;
 
