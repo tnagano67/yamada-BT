@@ -81,6 +81,28 @@ async function main() {
   }
   console.log(`Seeded ${badges.length} badge masters.`);
 
+  // Assign StudentGrade (E1) to dev student
+  const devStudent = await prisma.user.findUnique({
+    where: { email: "student@dev.local" },
+  });
+  if (devStudent) {
+    await prisma.studentGrade.upsert({
+      where: {
+        studentId_subject: {
+          studentId: devStudent.id,
+          subject: "english",
+        },
+      },
+      update: { currentGradeId: "E1" },
+      create: {
+        studentId: devStudent.id,
+        subject: "english",
+        currentGradeId: "E1",
+      },
+    });
+    console.log("Assigned StudentGrade E1 to dev student.");
+  }
+
   console.log("Seeding complete!");
 }
 
