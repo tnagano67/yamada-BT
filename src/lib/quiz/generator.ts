@@ -19,12 +19,118 @@ export function fisherYatesShuffle<T>(array: T[]): T[] {
 }
 
 /**
+ * グレードIDに対応する単語を取得する
+ *
+ * - new_words: gradeIdで直接検索
+ * - review/complete: reviewRangeStart..reviewRangeEnd の範囲で検索
+ */
+export async function fetchWordsForGrade(gradeId: string): Promise<QuizWord[]> {
+  const grade = await prisma.grade.findUnique({
+    where: { id: gradeId },
+    select: {
+      subject: true,
+      gradeType: true,
+      reviewRangeStart: true,
+      reviewRangeEnd: true,
+    },
+  });
+
+  if (!grade) {
+    throw new Error(`グレード ${gradeId} が見つかりません`);
+  }
+
+  if (grade.gradeType === "new_words") {
+    return prisma.word.findMany({
+      where: { gradeId },
+      select: { id: true, wordNumber: true, word: true, meaning: true },
+    });
+  }
+
+  // review / complete: 範囲指定で検索
+  if (grade.reviewRangeStart == null || grade.reviewRangeEnd == null) {
+    throw new Error(
+      `グレード ${gradeId} の復習範囲が設定されていません`,
+    );
+  }
+
+  return prisma.word.findMany({
+    where: {
+      subject: grade.subject,
+      wordNumber: {
+        gte: grade.reviewRangeStart,
+        lte: grade.reviewRangeEnd,
+      },
+    },
+    select: { id: true, wordNumber: true, word: true, meaning: true },
+  });
+}
+
+/**
+ * 層化サンプリング
+ *
+ * 復習グレード用。アイテムをバケットに分け、各バケットから均等に選出する。
+ * バケット不足時は他バケットから補填する。
+ *
+ * @param items - サンプリング対象
+ * @param count - 選出数
+ * @param getBucket - アイテムからバケット番号を取得する関数
+ */
+export function stratifiedSample<T>(
+  items: T[],
+  count: number,
+  getBucket: (item: T) => number,
+): T[] {
+  if (items.length <= count) {
+    return fisherYatesShuffle([...items]);
+  }
+
+  // バケットにグルーピング
+  const buckets = new Map<number, T[]>();
+  for (const item of items) {
+    const bucket = getBucket(item);
+    if (!buckets.has(bucket)) {
+      buckets.set(bucket, []);
+    }
+    buckets.get(bucket)!.push(item);
+  }
+
+  // 各バケットをシャッフル
+  for (const [, bucket] of buckets) {
+    fisherYatesShuffle(bucket);
+  }
+
+  const result: T[] = [];
+  const bucketKeys = [...buckets.keys()].sort((a, b) => a - b);
+
+  // ラウンドロビンで各バケットから均等に選出
+  let round = 0;
+  while (result.length < count) {
+    let addedThisRound = false;
+    for (const key of bucketKeys) {
+      if (result.length >= count) break;
+      const bucket = buckets.get(key)!;
+      if (round < bucket.length) {
+        result.push(bucket[round]);
+        addedThisRound = true;
+      }
+    }
+    if (!addedThisRound) break;
+    round++;
+  }
+
+  return fisherYatesShuffle(result);
+}
+
+const WORDS_PER_BUCKET = 50;
+
+/**
  * グレードIDから4択問題を自動生成する
  *
  * アルゴリズム:
- * 1. グレードのword範囲からDB検索
- * 2. Fisher-Yatesシャッフルで10問選出（不足時はpool全量）
- * 3. 各問題に誤答選択肢3つを同グレードからランダム選出
+ * 1. グレードのword範囲からDB検索（復習グレードは範囲検索）
+ * 2. 新出語: Fisher-Yatesシャッフルで10問選出
+ *    復習/完全制覇: 層化サンプリングで均等選出
+ * 3. 各問題に誤答選択肢3つを同プールからランダム選出
  * 4. 正解含む4択をシャッフル
  * 5. 最低4語必要（1正解+3誤答）、不足時はエラー
  */
@@ -32,11 +138,13 @@ export async function generateQuiz(
   gradeId: string,
   mode: QuizMode,
 ): Promise<GeneratedQuiz> {
-  // グレードの全単語を取得
-  const words = await prisma.word.findMany({
-    where: { gradeId },
-    select: { id: true, wordNumber: true, word: true, meaning: true },
-  });
+  const [words, grade] = await Promise.all([
+    fetchWordsForGrade(gradeId),
+    prisma.grade.findUnique({
+      where: { id: gradeId },
+      select: { gradeType: true },
+    }),
+  ]);
 
   if (words.length < MIN_WORDS_FOR_QUIZ) {
     throw new Error(
@@ -44,12 +152,21 @@ export async function generateQuiz(
     );
   }
 
-  // シャッフルして問題数分を選出
-  const shuffled = fisherYatesShuffle([...words]);
-  const selected = shuffled.slice(
-    0,
-    Math.min(QUIZ_QUESTION_COUNT, shuffled.length),
-  );
+  // 復習/完全制覇グレードは層化サンプリング、新出語はシャッフル
+  let selected: QuizWord[];
+  if (grade && grade.gradeType !== "new_words") {
+    selected = stratifiedSample(
+      words,
+      Math.min(QUIZ_QUESTION_COUNT, words.length),
+      (w) => Math.floor((w.wordNumber - 1) / WORDS_PER_BUCKET),
+    );
+  } else {
+    const shuffled = fisherYatesShuffle([...words]);
+    selected = shuffled.slice(
+      0,
+      Math.min(QUIZ_QUESTION_COUNT, shuffled.length),
+    );
+  }
 
   // 各問題について4択を生成
   const questions: GeneratedQuestion[] = selected.map((word) => {

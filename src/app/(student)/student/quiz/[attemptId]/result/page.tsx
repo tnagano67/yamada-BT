@@ -3,18 +3,26 @@ import { prisma } from "@/lib/db/prisma";
 import { redirect, notFound } from "next/navigation";
 import { QuizResult } from "@/components/quiz/QuizResult";
 import { QuizResultDetail } from "@/components/quiz/QuizResultDetail";
+import { PromotionNotification } from "@/components/grade/PromotionNotification";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface ResultPageProps {
   params: Promise<{ attemptId: string }>;
+  searchParams: Promise<{ promoted?: string; newGrade?: string }>;
 }
 
-export default async function QuizResultPage({ params }: ResultPageProps) {
+export default async function QuizResultPage({
+  params,
+  searchParams,
+}: ResultPageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { attemptId } = await params;
+  const [{ attemptId }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
   const attempt = await prisma.quizAttempt.findUnique({
     where: { id: attemptId },
@@ -41,6 +49,9 @@ export default async function QuizResultPage({ params }: ResultPageProps) {
     redirect(`/student/quiz/${attemptId}`);
   }
 
+  const isPromoted =
+    resolvedSearchParams.promoted === "1" && !!resolvedSearchParams.newGrade;
+
   const resultAnswers = attempt.answers.map((a) => ({
     word: a.word.word,
     meaning: a.word.meaning,
@@ -51,6 +62,12 @@ export default async function QuizResultPage({ params }: ResultPageProps) {
 
   return (
     <div className="container mx-auto max-w-lg space-y-4 p-4">
+      {isPromoted ? (
+        <PromotionNotification
+          oldGradeId={attempt.gradeId}
+          newGradeId={resolvedSearchParams.newGrade!}
+        />
+      ) : null}
       <QuizResult
         score={attempt.score ?? 0}
         totalQuestions={attempt.answers.length}

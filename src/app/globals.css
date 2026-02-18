@@ -121,3 +121,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes promotion-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-promotion-in {
+  animation: promotion-in 0.4s ease-out;
+}

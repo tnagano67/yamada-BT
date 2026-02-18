@@ -9,7 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ActiveTestBanner } from "@/components/quiz/ActiveTestBanner";
+import { GradeCard } from "@/components/grade/GradeCard";
 import { startQuiz } from "@/app/(student)/student/quiz/actions";
+import { getGradeProgressData } from "@/lib/grade/grade-service";
 
 export default async function StudentDashboard() {
   const session = await auth();
@@ -17,16 +19,13 @@ export default async function StudentDashboard() {
 
   const userId = session.user.id;
 
-  // 並列フェッチ（配信状態、学生グレード、受験済み確認）
-  const [activeDelivery, studentGrade, streak] = await Promise.all([
+  // 並列フェッチ（配信状態、グレード進捗、ストリーク）
+  const [activeDelivery, gradeProgress, streak] = await Promise.all([
     prisma.quizDelivery.findFirst({
       where: { status: "active" },
       orderBy: { deliveryTime: "desc" },
     }),
-    prisma.studentGrade.findFirst({
-      where: { studentId: userId, subject: "english" },
-      include: { currentGrade: true },
-    }),
+    getGradeProgressData(userId, "english"),
     prisma.studentStreak.findUnique({
       where: { studentId: userId },
     }),
@@ -93,31 +92,27 @@ export default async function StudentDashboard() {
           </Card>
 
           {/* 現在のグレード */}
-          <Card>
-            <CardHeader>
-              <CardTitle>現在のグレード</CardTitle>
-              <CardDescription>英語</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {studentGrade ? (
-                <div>
-                  <p className="text-3xl font-bold">
-                    {studentGrade.currentGradeId}
-                  </p>
-                  <form action={handleStartQuick} className="mt-3">
-                    <button
-                      type="submit"
-                      className="text-primary text-sm underline underline-offset-4 hover:no-underline"
-                    >
-                      クイックテストを受ける
-                    </button>
-                  </form>
-                </div>
-              ) : (
+          {gradeProgress ? (
+            <GradeCard data={gradeProgress} startQuickAction={handleStartQuick} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>現在のグレード</CardTitle>
+                <CardDescription>英語</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <p className="text-muted-foreground">グレード未設定</p>
-              )}
-            </CardContent>
-          </Card>
+                <form action={handleStartQuick} className="mt-3">
+                  <button
+                    type="submit"
+                    className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+                  >
+                    テストを開始して設定
+                  </button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           {/* ストリーク */}
           <Card>

@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import { generateQuiz } from "@/lib/quiz/generator";
 import { calculateScore } from "@/lib/quiz/scorer";
+import {
+  ensureStudentGrade,
+  processQuizResultForPromotion,
+} from "@/lib/grade/grade-service";
 import type { QuizMode } from "@/generated/prisma/client";
 import type { AnswerFeedback } from "@/lib/quiz/types";
 
@@ -23,14 +27,8 @@ export async function startQuiz(
 
   const userId = session.user.id;
 
-  // 生徒の現在のグレードを取得
-  const studentGrade = await prisma.studentGrade.findFirst({
-    where: { studentId: userId, subject: "english" },
-  });
-
-  if (!studentGrade) {
-    throw new Error("グレードが設定されていません");
-  }
+  // 生徒のグレードを取得（未存在ならE1で初期化）
+  const studentGrade = await ensureStudentGrade(userId, "english");
 
   // 朝テストモードの場合、配信を検証
   if (mode === "morning_test" && deliveryId) {
@@ -146,6 +144,9 @@ export async function completeQuiz(attemptId: string): Promise<void> {
       answers: {
         select: { isCorrect: true },
       },
+      grade: {
+        select: { subject: true },
+      },
     },
   });
   if (!attempt || attempt.studentId !== session.user.id) {
@@ -169,5 +170,20 @@ export async function completeQuiz(attemptId: string): Promise<void> {
     },
   });
 
-  redirect(`/student/quiz/${attemptId}/result`);
+  // 昇格処理
+  const promotionResult = await processQuizResultForPromotion(
+    session.user.id,
+    attempt.grade.subject,
+    attempt.gradeId,
+    scoreResult.isPassed,
+  );
+
+  // リダイレクト（昇格情報をクエリパラメータで付与）
+  const params = new URLSearchParams();
+  if (promotionResult.shouldPromote && promotionResult.newGradeId) {
+    params.set("promoted", "1");
+    params.set("newGrade", promotionResult.newGradeId);
+  }
+  const query = params.toString();
+  redirect(`/student/quiz/${attemptId}/result${query ? `?${query}` : ""}`);
 }
