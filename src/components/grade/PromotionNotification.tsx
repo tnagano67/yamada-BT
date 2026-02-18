@@ -1,5 +1,7 @@
 "use client";
 
+import { Trophy } from "lucide-react";
+
 interface PromotionNotificationProps {
   oldGradeId: string;
   newGradeId: string;
@@ -10,16 +12,17 @@ export function PromotionNotification({
   newGradeId,
 }: PromotionNotificationProps) {
   return (
-    <div className="animate-promotion-in rounded-lg border border-green-200 bg-green-50 p-6 text-center dark:border-green-800 dark:bg-green-950">
-      <p className="mb-2 text-lg font-bold text-green-700 dark:text-green-300">
+    <div className="animate-promotion-in rounded-lg bg-gradient-to-r from-teal-500 to-emerald-500 p-6 text-center shadow-lg">
+      <Trophy className="mx-auto mb-2 h-8 w-8 text-white" />
+      <p className="mb-3 text-xl font-bold text-white">
         昇格おめでとう!
       </p>
       <div className="flex items-center justify-center gap-3 text-2xl font-bold">
-        <span className="text-muted-foreground">{oldGradeId}</span>
-        <span className="text-green-600 dark:text-green-400" aria-hidden="true">
+        <span className="text-white/70">{oldGradeId}</span>
+        <span className="text-white" aria-hidden="true">
           &rarr;
         </span>
-        <span className="text-green-700 dark:text-green-300">{newGradeId}</span>
+        <span className="text-white">{newGradeId}</span>
       </div>
     </div>
   );

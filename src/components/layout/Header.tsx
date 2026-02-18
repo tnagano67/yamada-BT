@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserMenu } from "./UserMenu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, BookOpen } from "lucide-react";
 import type { UserRole } from "@/generated/prisma/client";
 
 interface HeaderProps {
@@ -17,12 +17,12 @@ interface HeaderProps {
 
 export function Header({ user, sidebarContent }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-teal-600 to-emerald-600 shadow-lg">
       <div className="flex h-14 items-center px-4">
         {sidebarContent && (
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2 md:hidden">
+              <Button variant="ghost" size="icon" className="mr-2 text-white hover:bg-white/20 md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">メニュー</span>
               </Button>
@@ -33,8 +33,9 @@ export function Header({ user, sidebarContent }: HeaderProps) {
             </SheetContent>
           </Sheet>
         )}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="font-bold">グレードアップ</span>
+        <Link href="/" className="flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-white" />
+          <span className="font-bold text-white">グレードアップ</span>
         </Link>
         <div className="flex flex-1 items-center justify-end space-x-2">
           <UserMenu user={user} />

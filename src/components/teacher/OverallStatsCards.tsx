@@ -4,6 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Users, Target } from "lucide-react";
 
 interface OverallStatsCardsProps {
   attendanceRate: number;
@@ -18,18 +19,24 @@ export function OverallStatsCards({
     <>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">受験率</CardTitle>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-teal-600" />
+            <CardTitle className="text-sm font-medium">受験率</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold">{attendanceRate}%</p>
+          <p className="text-2xl font-bold text-teal-600">{attendanceRate}%</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">平均正答率</CardTitle>
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-teal-600" />
+            <CardTitle className="text-sm font-medium">平均正答率</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold">
+          <p className="text-2xl font-bold text-teal-600">
             {averageScore !== null ? `${averageScore}%` : "—"}
           </p>
         </CardContent>

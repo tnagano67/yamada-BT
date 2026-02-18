@@ -25,7 +25,7 @@ export function QuizResultDetail({ answers }: QuizResultDetailProps) {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <p className="text-lg font-medium">全問正解です！</p>
+          <p className="text-lg font-medium text-teal-600">全問正解です！</p>
         </CardContent>
       </Card>
     );
@@ -46,7 +46,7 @@ export function QuizResultDetail({ answers }: QuizResultDetailProps) {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">正解: </span>
-                  <span className="text-green-600 dark:text-green-400">
+                  <span className="text-teal-600 dark:text-teal-400">
                     {answer.correctOption}
                   </span>
                 </div>

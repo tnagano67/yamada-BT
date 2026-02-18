@@ -56,9 +56,9 @@ export function RecentResultsList({ results }: RecentResultsListProps) {
                   </span>
                   {r.isPassed !== null ? (
                     r.isPassed ? (
-                      <Badge variant="default">合格</Badge>
+                      <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100">合格</Badge>
                     ) : (
-                      <Badge variant="secondary">不合格</Badge>
+                      <Badge className="bg-red-50 text-red-600 hover:bg-red-50">不合格</Badge>
                     )
                   ) : null}
                   <span className="text-muted-foreground text-xs">

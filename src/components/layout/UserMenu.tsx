@@ -38,10 +38,10 @@ export function UserMenu({ user }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+        <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-white/20">
           <Avatar className="h-9 w-9">
             <AvatarImage src={user.image ?? undefined} alt={user.name ?? ""} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback className="bg-teal-700 text-white">{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

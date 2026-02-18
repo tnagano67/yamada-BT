@@ -38,7 +38,7 @@ export function SemesterProgressCard({
           </div>
           <div className="bg-muted h-3 rounded-full">
             <div
-              className="bg-primary h-3 rounded-full transition-all"
+              className="bg-gradient-progress h-3 rounded-full transition-all"
               style={{ width: `${clampedPercent}%` }}
             />
           </div>

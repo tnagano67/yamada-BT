@@ -109,9 +109,16 @@ export default async function StudentDashboard() {
     await startQuiz("quick");
   }
 
+  // 時間帯に応じた挨拶
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "おはよう！今日も頑張ろう" : hour < 18 ? "こんにちは！学習を続けよう" : "こんばんは！復習しよう";
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-bold">ダッシュボード</h1>
+      <div className="mb-6">
+        <p className="text-sm text-teal-600 font-medium">{greeting}</p>
+        <h1 className="text-2xl font-bold">ダッシュボード</h1>
+      </div>
 
       <div className="space-y-4">
         {/* アクティブテストバナー */}
@@ -147,7 +154,7 @@ export default async function StudentDashboard() {
               <form action={handleStartQuick} className="mt-2">
                 <button
                   type="submit"
-                  className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+                  className="text-teal-600 text-sm underline underline-offset-4 hover:no-underline"
                 >
                   テストを開始して設定
                 </button>
@@ -183,7 +190,7 @@ export default async function StudentDashboard() {
         <div className="flex gap-3">
           <Link
             href="/student/study"
-            className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+            className="text-teal-600 text-sm underline underline-offset-4 hover:no-underline"
           >
             自習モードで学習する
           </Link>

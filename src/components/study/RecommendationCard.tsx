@@ -18,11 +18,11 @@ export function RecommendationCard({
   startAction,
 }: RecommendationCardProps) {
   return (
-    <Card className="border-primary/20 bg-primary/5">
+    <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 dark:border-teal-800 dark:from-teal-950/30 dark:to-emerald-950/30">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="text-primary h-5 w-5" />
-          <CardTitle className="text-base">おすすめ</CardTitle>
+          <Sparkles className="h-5 w-5 text-teal-600" />
+          <CardTitle className="text-base text-teal-700 dark:text-teal-300">おすすめ</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -36,7 +36,7 @@ export function RecommendationCard({
             await startAction(recommendation.suggestedMode);
           }}
         >
-          <Button type="submit" size="sm">
+          <Button type="submit" size="sm" className="bg-gradient-primary text-white hover:opacity-90">
             {recommendation.suggestedMode === "promotion"
               ? "昇格チャレンジを開始"
               : "クイック練習を開始"}

@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BookOpen } from "lucide-react";
 
 const DEV_USERS = [
   { email: "admin@dev.local", label: "管理者", role: "admin" },
@@ -30,9 +31,12 @@ export default async function LoginPage() {
   const isDev = process.env.NODE_ENV === "development";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-600 to-emerald-600 p-4">
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-500">
+            <BookOpen className="h-7 w-7 text-white" />
+          </div>
           <CardTitle className="text-2xl">グレードアップ学習システム</CardTitle>
           <CardDescription>
             学校のGoogleアカウントでログインしてください
@@ -45,7 +49,11 @@ export default async function LoginPage() {
               await signIn("google", { redirectTo: "/" });
             }}
           >
-            <Button type="submit" className="w-full" size="lg">
+            <Button
+              type="submit"
+              className="w-full border-2 border-teal-200 bg-white text-teal-700 hover:bg-teal-50"
+              size="lg"
+            >
               Googleアカウントでログイン
             </Button>
           </form>

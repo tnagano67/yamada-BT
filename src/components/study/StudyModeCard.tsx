@@ -22,7 +22,7 @@ function ProgressDots({
         <span
           key={i}
           className={`inline-block h-2.5 w-2.5 rounded-full ${
-            i < current ? "bg-primary" : "bg-muted"
+            i < current ? "bg-gradient-primary" : "bg-muted"
           }`}
         />
       ))}
@@ -40,20 +40,20 @@ export function QuickPracticeCard({
   startAction,
 }: QuickPracticeCardProps) {
   return (
-    <Card>
+    <Card className="card-hover border-amber-200/50">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-yellow-500" />
+          <Zap className="h-5 w-5 text-amber-500" />
           <CardTitle className="text-base">クイック練習</CardTitle>
         </div>
         <CardDescription>現在のグレードで10問練習</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="mb-3 text-sm">
-          グレード: <span className="font-bold">{gradeId}</span>
+          グレード: <span className="font-bold text-teal-600">{gradeId}</span>
         </p>
         <form action={startAction}>
-          <Button type="submit" variant="outline" className="w-full">
+          <Button type="submit" className="w-full bg-gradient-primary text-white hover:opacity-90">
             練習を開始
           </Button>
         </form>
@@ -80,7 +80,7 @@ export function PromotionChallengeCard({
   const isDisabled = attemptsRemaining <= 0 || isMaxGrade;
 
   return (
-    <Card>
+    <Card className="card-hover border-orange-200/50">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-orange-500" />
@@ -104,8 +104,7 @@ export function PromotionChallengeCard({
         <form action={startAction}>
           <Button
             type="submit"
-            variant="outline"
-            className="w-full"
+            className="w-full bg-gradient-accent text-white hover:opacity-90"
             disabled={isDisabled}
           >
             {isMaxGrade

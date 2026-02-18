@@ -29,7 +29,7 @@ function ProgressDots({
           key={i}
           className={`inline-block h-3 w-3 rounded-full ${
             i < current
-              ? "bg-primary"
+              ? "bg-gradient-primary"
               : "bg-muted"
           }`}
         />
@@ -52,7 +52,7 @@ export function GradeCard({ data, startQuickAction }: GradeCardProps) {
     : getNextGradeId(data.currentGradeId);
 
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>現在のグレード</CardTitle>
@@ -65,10 +65,10 @@ export function GradeCard({ data, startQuickAction }: GradeCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-3xl font-bold">{data.currentGradeId}</p>
+        <p className="text-4xl font-bold text-teal-600">{data.currentGradeId}</p>
 
         {data.isMaxGrade ? (
-          <p className="text-sm font-medium text-green-600 dark:text-green-400">
+          <p className="text-sm font-medium text-teal-600 dark:text-teal-400">
             最高グレード到達
           </p>
         ) : (
@@ -91,7 +91,7 @@ export function GradeCard({ data, startQuickAction }: GradeCardProps) {
         <form action={startQuickAction}>
           <button
             type="submit"
-            className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+            className="text-teal-600 text-sm underline underline-offset-4 hover:no-underline"
           >
             クイック練習を受ける
           </button>

@@ -14,7 +14,7 @@ interface StreakDisplayProps {
 
 export function StreakDisplay({ data }: StreakDisplayProps) {
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FlameIcon flameLevel={data.flameLevel} />
@@ -24,7 +24,7 @@ export function StreakDisplay({ data }: StreakDisplayProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <p className="text-3xl font-bold">
+          <p className="text-4xl font-bold text-orange-500">
             {data.currentStreak}
             <span className="text-muted-foreground ml-1 text-base font-normal">
               日連続

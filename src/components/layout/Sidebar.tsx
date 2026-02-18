@@ -54,8 +54,8 @@ export function Sidebar({ variant }: SidebarProps) {
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "border-l-3 border-teal-600 bg-teal-50 text-teal-700"
+                : "text-muted-foreground hover:bg-teal-50/50 hover:text-teal-700"
             )}
           >
             <Icon className="h-4 w-4" />

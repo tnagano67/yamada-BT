@@ -14,9 +14,9 @@ export function QuizProgress({ current, total }: QuizProgressProps) {
         </span>
         <span className="text-muted-foreground text-sm">{percentage}%</span>
       </div>
-      <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
+      <div className="bg-secondary h-3 w-full overflow-hidden rounded-full">
         <div
-          className="bg-primary h-full rounded-full transition-all duration-300"
+          className="bg-gradient-progress h-full rounded-full transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>

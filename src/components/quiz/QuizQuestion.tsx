@@ -35,8 +35,8 @@ export function QuizQuestion({
   function getOptionStyle(option: string): string {
     if (!feedback) {
       return selected === option
-        ? "border-primary bg-primary/5"
-        : "border-border hover:border-primary/50";
+        ? "border-teal-500 bg-teal-50 dark:bg-teal-950/30"
+        : "border-border hover:border-teal-400 hover:bg-teal-50/50";
     }
 
     // フィードバック表示中
@@ -52,7 +52,7 @@ export function QuizQuestion({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-center text-3xl">{word}</CardTitle>
+        <CardTitle className="text-center text-3xl text-teal-700 dark:text-teal-300">{word}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
@@ -61,7 +61,7 @@ export function QuizQuestion({
               key={index}
               variant="outline"
               className={cn(
-                "h-auto min-h-12 whitespace-normal px-4 py-3 text-left text-base",
+                "h-auto min-h-12 whitespace-normal px-4 py-3 text-left text-base transition-colors",
                 getOptionStyle(option),
               )}
               onClick={() => handleSelect(option)}

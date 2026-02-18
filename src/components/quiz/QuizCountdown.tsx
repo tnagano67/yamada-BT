@@ -22,7 +22,7 @@ export function QuizCountdown({ onComplete }: QuizCountdownProps) {
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="text-center">
         <p className="text-muted-foreground mb-4 text-lg">テスト開始</p>
-        <div className="text-primary text-8xl font-bold tabular-nums">
+        <div className="animate-countdown text-8xl font-bold tabular-nums text-teal-600">
           {count}
         </div>
       </div>
