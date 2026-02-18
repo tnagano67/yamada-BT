@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -494,6 +495,24 @@ model StudentBadgeReveal {
 
   @@unique([studentId, badgeId])
   @@map("student_badge_reveals")
+}
+
+// ============================================================
+// Schedule Suspension
+// ============================================================
+
+model ScheduleSuspension {
+  id           String   @id @default(cuid())
+  academicYear Int
+  semester     Int
+  subject      Subject
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+  reason       String?
+  createdAt    DateTime @default(now())
+
+  @@index([academicYear, semester, subject])
+  @@map("schedule_suspensions")
 }
 
 // ============================================================

@@ -1,17 +1,15 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ActiveTestBanner } from "@/components/quiz/ActiveTestBanner";
 import { GradeCard } from "@/components/grade/GradeCard";
+import { StreakDisplay } from "@/components/streak/StreakDisplay";
+import { RecentResultsList } from "@/components/student/RecentResultsList";
+import { SemesterProgressCard } from "@/components/student/SemesterProgressCard";
 import { startQuiz } from "@/app/(student)/student/quiz/actions";
 import { getGradeProgressData } from "@/lib/grade/grade-service";
+import { getStreakDisplayData } from "@/lib/streak/streak-service";
+import Link from "next/link";
 
 export default async function StudentDashboard() {
   const session = await auth();
@@ -19,15 +17,40 @@ export default async function StudentDashboard() {
 
   const userId = session.user.id;
 
-  // 並列フェッチ（配信状態、グレード進捗、ストリーク）
-  const [activeDelivery, gradeProgress, streak] = await Promise.all([
+  // 並列フェッチ
+  const [
+    activeDelivery,
+    englishGrade,
+    japaneseGrade,
+    streakData,
+    recentAttempts,
+    semesterGoal,
+  ] = await Promise.all([
     prisma.quizDelivery.findFirst({
       where: { status: "active" },
       orderBy: { deliveryTime: "desc" },
     }),
     getGradeProgressData(userId, "english"),
-    prisma.studentStreak.findUnique({
-      where: { studentId: userId },
+    getGradeProgressData(userId, "japanese"),
+    getStreakDisplayData(userId),
+    prisma.quizAttempt.findMany({
+      where: { studentId: userId, submittedAt: { not: null } },
+      select: {
+        id: true,
+        mode: true,
+        gradeId: true,
+        scorePercentage: true,
+        isPassed: true,
+        submittedAt: true,
+      },
+      orderBy: { submittedAt: "desc" },
+      take: 5,
+    }),
+    prisma.semesterGoal.findFirst({
+      where: { studentId: userId, status: "in_progress" },
+      include: {
+        targetGrade: { select: { id: true, gradeNumber: true, subject: true } },
+      },
     }),
   ]);
 
@@ -42,6 +65,37 @@ export default async function StudentDashboard() {
       },
     });
     alreadyTaken = !!existingAttempt;
+  }
+
+  // 学期目標の進捗計算
+  let semesterProgressData: {
+    subject: string;
+    currentGradeId: string;
+    targetGradeId: string;
+    progressPercent: number;
+  } | null = null;
+
+  if (semesterGoal) {
+    const currentGrade = await prisma.studentGrade.findUnique({
+      where: {
+        studentId_subject: {
+          studentId: userId,
+          subject: semesterGoal.targetGrade.subject,
+        },
+      },
+      include: { currentGrade: { select: { gradeNumber: true } } },
+    });
+
+    if (currentGrade) {
+      const target = semesterGoal.targetGrade.gradeNumber;
+      const current = currentGrade.currentGrade.gradeNumber;
+      semesterProgressData = {
+        subject: semesterGoal.targetGrade.subject,
+        currentGradeId: currentGrade.currentGradeId,
+        targetGradeId: semesterGoal.targetGrade.id,
+        progressPercent: target > 0 ? Math.round((current / target) * 100) : 0,
+      };
+    }
   }
 
   async function handleStartTest(formData: FormData) {
@@ -71,68 +125,68 @@ export default async function StudentDashboard() {
           />
         ) : null}
 
+        {/* グレード・ストリーク 3カラム */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* 今日のテスト */}
-          <Card>
-            <CardHeader>
-              <CardTitle>今日のテスト</CardTitle>
-              <CardDescription>朝テストの状況</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activeDelivery ? (
-                alreadyTaken ? (
-                  <p className="text-green-600 dark:text-green-400">受験済み</p>
-                ) : (
-                  <p className="text-orange-600 dark:text-orange-400">未受験</p>
-                )
-              ) : (
-                <p className="text-muted-foreground">配信なし</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 現在のグレード */}
-          {gradeProgress ? (
-            <GradeCard data={gradeProgress} startQuickAction={handleStartQuick} />
+          {/* ストリーク */}
+          {streakData ? (
+            <StreakDisplay data={streakData} />
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>現在のグレード</CardTitle>
-                <CardDescription>英語</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">グレード未設定</p>
-                <form action={handleStartQuick} className="mt-3">
-                  <button
-                    type="submit"
-                    className="text-primary text-sm underline underline-offset-4 hover:no-underline"
-                  >
-                    テストを開始して設定
-                  </button>
-                </form>
-              </CardContent>
-            </Card>
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-medium">ストリーク</p>
+              <p className="text-muted-foreground text-sm">記録なし</p>
+            </div>
           )}
 
-          {/* ストリーク */}
-          <Card>
-            <CardHeader>
-              <CardTitle>ストリーク</CardTitle>
-              <CardDescription>連続学習記録</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {streak ? (
-                <p className="text-3xl font-bold">
-                  {streak.currentStreak}
-                  <span className="text-muted-foreground ml-1 text-base font-normal">
-                    日連続
-                  </span>
-                </p>
-              ) : (
-                <p className="text-muted-foreground">記録なし</p>
-              )}
-            </CardContent>
-          </Card>
+          {/* 英語グレード */}
+          {englishGrade ? (
+            <GradeCard data={englishGrade} startQuickAction={handleStartQuick} />
+          ) : (
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-medium">英語グレード</p>
+              <p className="text-muted-foreground text-sm">未設定</p>
+              <form action={handleStartQuick} className="mt-2">
+                <button
+                  type="submit"
+                  className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+                >
+                  テストを開始して設定
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* 日本語グレード */}
+          {japaneseGrade ? (
+            <GradeCard data={japaneseGrade} startQuickAction={handleStartQuick} />
+          ) : (
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-medium">日本語グレード</p>
+              <p className="text-muted-foreground text-sm">未設定</p>
+            </div>
+          )}
+        </div>
+
+        {/* 学期目標 */}
+        {semesterProgressData ? (
+          <SemesterProgressCard
+            subject={semesterProgressData.subject}
+            currentGradeId={semesterProgressData.currentGradeId}
+            targetGradeId={semesterProgressData.targetGradeId}
+            progressPercent={semesterProgressData.progressPercent}
+          />
+        ) : null}
+
+        {/* 直近のテスト結果 */}
+        <RecentResultsList results={recentAttempts} />
+
+        {/* 学習導線リンク */}
+        <div className="flex gap-3">
+          <Link
+            href="/student/study"
+            className="text-primary text-sm underline underline-offset-4 hover:no-underline"
+          >
+            自習モードで学習する
+          </Link>
         </div>
       </div>
     </div>

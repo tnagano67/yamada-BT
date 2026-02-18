@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/db/prisma";
+import { todayJST } from "@/lib/date-utils";
 import type { Subject } from "@/generated/prisma/client";
 import {
   getInitialGradeId,
   calculatePromotionUpdate,
   isMaxGrade,
 } from "./promotion";
-import { CONSECUTIVE_PASSES_REQUIRED } from "./constants";
+import {
+  CONSECUTIVE_PASSES_REQUIRED,
+  MAX_PROMOTION_ATTEMPTS_PER_DAY,
+} from "./constants";
 import type { PromotionUpdateResult, GradeProgressData } from "./types";
 
 /**
@@ -124,6 +128,45 @@ export async function processQuizResultForPromotion(
 
     return result;
   });
+}
+
+/**
+ * 昇格チャレンジの残り回数を取得する
+ *
+ * updatedAt と今日の日付を比較し、日が変わっていたら attemptsToday をリセット
+ */
+export async function getPromotionAttemptsRemaining(
+  studentId: string,
+  subject: Subject,
+): Promise<{ remaining: number; attemptsToday: number }> {
+  const progress = await prisma.promotionProgress.findUnique({
+    where: {
+      studentId_subject: { studentId, subject },
+    },
+    select: { attemptsToday: true, updatedAt: true },
+  });
+
+  if (!progress) {
+    return {
+      remaining: MAX_PROMOTION_ATTEMPTS_PER_DAY,
+      attemptsToday: 0,
+    };
+  }
+
+  // 日付が変わっていたら遅延リセット（JST基準）
+  const today = todayJST();
+  const updatedJst = new Date(progress.updatedAt.getTime() + 9 * 60 * 60 * 1000);
+  const updatedDateJst = new Date(
+    Date.UTC(updatedJst.getUTCFullYear(), updatedJst.getUTCMonth(), updatedJst.getUTCDate()),
+  );
+
+  const attemptsToday =
+    updatedDateJst.getTime() < today.getTime() ? 0 : progress.attemptsToday;
+
+  return {
+    remaining: Math.max(0, MAX_PROMOTION_ATTEMPTS_PER_DAY - attemptsToday),
+    attemptsToday,
+  };
 }
 
 /**

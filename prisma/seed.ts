@@ -1,6 +1,7 @@
 import { PrismaClient } from "../src/generated/prisma/client";
 import { getAllGrades } from "./seed/grades";
 import { getSampleWords } from "./seed/sample-words";
+import { seedSprint6Data } from "./seed/sprint6-data";
 
 const prisma = new PrismaClient();
 
@@ -102,6 +103,43 @@ async function main() {
     });
     console.log("Assigned StudentGrade E1 to dev student.");
   }
+
+  // Seed today's active QuizDelivery for dev testing
+  // JST today as UTC midnight (for @db.Date field)
+  const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const todayUtc = new Date(
+    Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()),
+  );
+
+  for (const subject of ["english", "japanese"] as const) {
+    const existing = await prisma.quizDelivery.findUnique({
+      where: { date_subject: { date: todayUtc, subject } },
+    });
+    if (!existing) {
+      // deliveryTime = JST 8:15 (= UTC 23:15 前日)
+      const deliveryTime = new Date(todayUtc);
+      deliveryTime.setUTCHours(-1 + 24, 15, 0, 0); // 前日 23:15 UTC = JST 8:15
+      deliveryTime.setUTCDate(deliveryTime.getUTCDate() - 1);
+
+      // deadlineTime = JST 23:59 (= UTC 14:59)
+      const deadlineTime = new Date(todayUtc);
+      deadlineTime.setUTCHours(14, 59, 0, 0);
+
+      await prisma.quizDelivery.create({
+        data: {
+          date: todayUtc,
+          subject,
+          deliveryTime,
+          deadlineTime,
+          status: "active",
+        },
+      });
+      console.log(`Created active delivery for today (${subject}).`);
+    }
+  }
+
+  // Seed Sprint 6 test data (classes, students, quiz history, etc.)
+  await seedSprint6Data(prisma);
 
   console.log("Seeding complete!");
 }

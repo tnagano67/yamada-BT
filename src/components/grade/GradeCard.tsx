@@ -93,7 +93,7 @@ export function GradeCard({ data, startQuickAction }: GradeCardProps) {
             type="submit"
             className="text-primary text-sm underline underline-offset-4 hover:no-underline"
           >
-            クイックテストを受ける
+            クイック練習を受ける
           </button>
         </form>
       </CardContent>

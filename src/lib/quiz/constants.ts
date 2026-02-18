@@ -12,3 +12,6 @@ export const OPTIONS_COUNT = 4;
 
 /** 最低必要語彙数（1正解 + 3誤答） */
 export const MIN_WORDS_FOR_QUIZ = 4;
+
+/** クイック練習モードでの誤答優先出題割合（30%） */
+export const QUICK_MODE_WRONG_ANSWER_RATIO = 0.3;

@@ -29,7 +29,7 @@ const teacherItems: SidebarItem[] = [
 
 const adminItems: SidebarItem[] = [
   { href: "/admin/school", label: "学校管理", icon: Settings },
-  { href: "/admin/users", label: "ユーザー管理", icon: Users },
+  { href: "/admin/teachers", label: "教員管理", icon: Users },
   { href: "/admin/classes", label: "クラス管理", icon: BookOpen },
   { href: "/admin/calendar", label: "カレンダー", icon: Calendar },
 ];

@@ -6,3 +6,6 @@ export const MAX_ENGLISH_GRADE = 48;
 
 /** 日本語グレードの最大値 */
 export const MAX_JAPANESE_GRADE = 20;
+
+/** 昇格チャレンジの1日あたり最大回数 */
+export const MAX_PROMOTION_ATTEMPTS_PER_DAY = 3;

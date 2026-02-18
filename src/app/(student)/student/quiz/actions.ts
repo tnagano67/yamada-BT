@@ -8,7 +8,9 @@ import { calculateScore } from "@/lib/quiz/scorer";
 import {
   ensureStudentGrade,
   processQuizResultForPromotion,
+  getPromotionAttemptsRemaining,
 } from "@/lib/grade/grade-service";
+import { recordMorningTestAttendance } from "@/lib/streak/streak-service";
 import type { QuizMode } from "@/generated/prisma/client";
 import type { AnswerFeedback } from "@/lib/quiz/types";
 
@@ -29,6 +31,19 @@ export async function startQuiz(
 
   // 生徒のグレードを取得（未存在ならE1で初期化）
   const studentGrade = await ensureStudentGrade(userId, "english");
+
+  // 昇格チャレンジモードの場合、残り回数を検証
+  if (mode === "promotion") {
+    const { remaining } = await getPromotionAttemptsRemaining(
+      userId,
+      "english",
+    );
+    if (remaining <= 0) {
+      throw new Error(
+        "本日の昇格チャレンジ回数の上限に達しました（1日3回まで）",
+      );
+    }
+  }
 
   // 朝テストモードの場合、配信を検証
   if (mode === "morning_test" && deliveryId) {
@@ -52,8 +67,8 @@ export async function startQuiz(
     }
   }
 
-  // 問題を自動生成
-  const quiz = await generateQuiz(studentGrade.currentGradeId, mode);
+  // 問題を自動生成（quickモード時は誤答優先のためuserIdを渡す）
+  const quiz = await generateQuiz(studentGrade.currentGradeId, mode, userId);
 
   // QuizAttempt を作成
   const attempt = await prisma.quizAttempt.create({
@@ -170,13 +185,21 @@ export async function completeQuiz(attemptId: string): Promise<void> {
     },
   });
 
-  // 昇格処理
-  const promotionResult = await processQuizResultForPromotion(
-    session.user.id,
-    attempt.grade.subject,
-    attempt.gradeId,
-    scoreResult.isPassed,
-  );
+  // 昇格処理（morning_test / promotion のみ反映、quick / weakness は練習専用）
+  const promotionModes: QuizMode[] = ["morning_test", "promotion"];
+  const promotionResult = promotionModes.includes(attempt.mode)
+    ? await processQuizResultForPromotion(
+        session.user.id,
+        attempt.grade.subject,
+        attempt.gradeId,
+        scoreResult.isPassed,
+      )
+    : { newConsecutivePasses: 0, shouldPromote: false, newGradeId: null };
+
+  // 朝テスト受験時にストリーク記録
+  if (attempt.mode === "morning_test") {
+    await recordMorningTestAttendance(session.user.id);
+  }
 
   // リダイレクト（昇格情報をクエリパラメータで付与）
   const params = new URLSearchParams();

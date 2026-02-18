@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate-deliveries",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/activate-delivery",
+      "schedule": "15 23 * * *"
+    },
+    {
+      "path": "/api/cron/close-delivery",
+      "schedule": "30 23 * * *"
+    },
+    {
+      "path": "/api/cron/evaluate-streaks",
+      "schedule": "5 13 * * *"
+    }
+  ]
+}

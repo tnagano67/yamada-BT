@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import type { UserRole } from "@/generated/prisma/client";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/cron"];
 
 const ROUTE_ROLE_MAP: { prefix: string; minRole: UserRole }[] = [
   { prefix: "/admin", minRole: "admin" },

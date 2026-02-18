@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { fisherYatesShuffle, stratifiedSample } from "./generator";
+import {
+  fisherYatesShuffle,
+  stratifiedSample,
+  selectWithWrongAnswerPriority,
+} from "./generator";
+import type { QuizWord } from "./types";
 
 describe("fisherYatesShuffle", () => {
   it("配列の長さが変わらない", () => {
@@ -90,5 +95,71 @@ describe("stratifiedSample", () => {
     const result = stratifiedSample(items, 2, (i) => i.bucket);
     expect(result).toHaveLength(2);
     expect(result.map((r) => r.id).sort()).toEqual([1, 2]);
+  });
+});
+
+describe("selectWithWrongAnswerPriority", () => {
+  const makeWord = (id: string, num: number): QuizWord => ({
+    id,
+    wordNumber: num,
+    word: `word${num}`,
+    meaning: `meaning${num}`,
+  });
+
+  const words: QuizWord[] = Array.from({ length: 20 }, (_, i) =>
+    makeWord(`w${i + 1}`, i + 1),
+  );
+
+  it("誤答がある場合、誤答が優先的に含まれる", () => {
+    const incorrectWordIds = ["w1", "w2", "w3", "w4", "w5"];
+
+    // 複数回実行して統計的に確認
+    let wrongIncluded = 0;
+    const trials = 100;
+    for (let i = 0; i < trials; i++) {
+      const result = selectWithWrongAnswerPriority(words, incorrectWordIds, 10);
+      expect(result).toHaveLength(10);
+      const wrongCount = result.filter((w) =>
+        incorrectWordIds.includes(w.id),
+      ).length;
+      wrongIncluded += wrongCount;
+    }
+    // 10問中30% = MAX 3問が誤答枠。平均で少なくとも2問以上は誤答が含まれるはず
+    expect(wrongIncluded / trials).toBeGreaterThan(1.5);
+  });
+
+  it("誤答が少ない場合、その数だけ含まれる", () => {
+    const incorrectWordIds = ["w1"];
+    const result = selectWithWrongAnswerPriority(words, incorrectWordIds, 10);
+    expect(result).toHaveLength(10);
+    // w1が含まれるはず
+    expect(result.some((w) => w.id === "w1")).toBe(true);
+  });
+
+  it("誤答リストが空なら通常のシャッフルと同じ挙動", () => {
+    const result = selectWithWrongAnswerPriority(words, [], 10);
+    expect(result).toHaveLength(10);
+    // 全要素がwordsに含まれる
+    for (const w of result) {
+      expect(words.some((orig) => orig.id === w.id)).toBe(true);
+    }
+  });
+
+  it("要求数が単語総数以下でも動作する", () => {
+    const smallPool = words.slice(0, 5);
+    const incorrectWordIds = ["w1", "w2"];
+    const result = selectWithWrongAnswerPriority(
+      smallPool,
+      incorrectWordIds,
+      5,
+    );
+    expect(result).toHaveLength(5);
+  });
+
+  it("重複なく選出される", () => {
+    const incorrectWordIds = ["w1", "w2", "w3"];
+    const result = selectWithWrongAnswerPriority(words, incorrectWordIds, 10);
+    const ids = result.map((w) => w.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

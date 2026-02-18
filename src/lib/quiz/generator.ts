@@ -3,6 +3,7 @@ import {
   QUIZ_QUESTION_COUNT,
   OPTIONS_COUNT,
   MIN_WORDS_FOR_QUIZ,
+  QUICK_MODE_WRONG_ANSWER_RATIO,
 } from "./constants";
 import type { QuizWord, GeneratedQuestion, GeneratedQuiz } from "./types";
 import type { QuizMode } from "@/generated/prisma/client";
@@ -124,11 +125,78 @@ export function stratifiedSample<T>(
 const WORDS_PER_BUCKET = 50;
 
 /**
+ * 生徒の過去の誤答wordIdを取得する（指定のグレード単語プール内）
+ */
+export async function fetchIncorrectWordIds(
+  studentId: string,
+  gradeWordIds: string[],
+): Promise<string[]> {
+  if (gradeWordIds.length === 0) return [];
+
+  const incorrectAnswers = await prisma.quizAnswer.findMany({
+    where: {
+      attempt: { studentId },
+      wordId: { in: gradeWordIds },
+      isCorrect: false,
+    },
+    select: { wordId: true },
+    distinct: ["wordId"],
+  });
+
+  return incorrectAnswers.map((a) => a.wordId);
+}
+
+/**
+ * 誤答優先で問題を選出する（クイック練習モード用）
+ *
+ * 1. 誤答プールから MAX 3問選出
+ * 2. 残りを通常プールからランダム選出
+ * 3. 誤答がなければ通常動作にフォールバック
+ */
+export function selectWithWrongAnswerPriority(
+  words: QuizWord[],
+  incorrectWordIds: string[],
+  totalCount: number,
+): QuizWord[] {
+  const maxWrongCount = Math.floor(totalCount * QUICK_MODE_WRONG_ANSWER_RATIO);
+
+  const wrongWords = words.filter((w) => incorrectWordIds.includes(w.id));
+  const normalWords = words.filter((w) => !incorrectWordIds.includes(w.id));
+
+  // 誤答プールからシャッフル選出
+  const shuffledWrong = fisherYatesShuffle([...wrongWords]);
+  const selectedWrong = shuffledWrong.slice(
+    0,
+    Math.min(maxWrongCount, shuffledWrong.length),
+  );
+
+  // 残り枠を通常プールから
+  const remaining = totalCount - selectedWrong.length;
+  const shuffledNormal = fisherYatesShuffle([...normalWords]);
+  const selectedNormal = shuffledNormal.slice(
+    0,
+    Math.min(remaining, shuffledNormal.length),
+  );
+
+  // 通常プールが不足時、誤答プールから追加
+  const combined = [...selectedWrong, ...selectedNormal];
+  if (combined.length < totalCount) {
+    const additionalWrong = shuffledWrong
+      .slice(selectedWrong.length)
+      .slice(0, totalCount - combined.length);
+    combined.push(...additionalWrong);
+  }
+
+  return fisherYatesShuffle(combined);
+}
+
+/**
  * グレードIDから4択問題を自動生成する
  *
  * アルゴリズム:
  * 1. グレードのword範囲からDB検索（復習グレードは範囲検索）
- * 2. 新出語: Fisher-Yatesシャッフルで10問選出
+ * 2. クイック練習 + studentId指定時: 誤答優先出題
+ *    新出語: Fisher-Yatesシャッフルで10問選出
  *    復習/完全制覇: 層化サンプリングで均等選出
  * 3. 各問題に誤答選択肢3つを同プールからランダム選出
  * 4. 正解含む4択をシャッフル
@@ -137,6 +205,7 @@ const WORDS_PER_BUCKET = 50;
 export async function generateQuiz(
   gradeId: string,
   mode: QuizMode,
+  studentId?: string,
 ): Promise<GeneratedQuiz> {
   const [words, grade] = await Promise.all([
     fetchWordsForGrade(gradeId),
@@ -152,20 +221,35 @@ export async function generateQuiz(
     );
   }
 
-  // 復習/完全制覇グレードは層化サンプリング、新出語はシャッフル
+  const questionCount = Math.min(QUIZ_QUESTION_COUNT, words.length);
+
   let selected: QuizWord[];
-  if (grade && grade.gradeType !== "new_words") {
+
+  // クイック練習モード + studentId指定時は誤答優先出題
+  if (mode === "quick" && studentId) {
+    const wordIds = words.map((w) => w.id);
+    const incorrectWordIds = await fetchIncorrectWordIds(studentId, wordIds);
+
+    if (incorrectWordIds.length > 0) {
+      selected = selectWithWrongAnswerPriority(
+        words,
+        incorrectWordIds,
+        questionCount,
+      );
+    } else {
+      // 誤答なし: 通常フォールバック
+      selected = fisherYatesShuffle([...words]).slice(0, questionCount);
+    }
+  } else if (grade && grade.gradeType !== "new_words") {
+    // 復習/完全制覇グレードは層化サンプリング
     selected = stratifiedSample(
       words,
-      Math.min(QUIZ_QUESTION_COUNT, words.length),
+      questionCount,
       (w) => Math.floor((w.wordNumber - 1) / WORDS_PER_BUCKET),
     );
   } else {
     const shuffled = fisherYatesShuffle([...words]);
-    selected = shuffled.slice(
-      0,
-      Math.min(QUIZ_QUESTION_COUNT, shuffled.length),
-    );
+    selected = shuffled.slice(0, questionCount);
   }
 
   // 各問題について4択を生成
