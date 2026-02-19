@@ -4,6 +4,7 @@ import { currentYearJST, currentMonthJST } from "@/lib/date-utils";
 import { redirect } from "next/navigation";
 import {
   getSchoolCalendarMonth,
+  getSchoolCalendarYear,
   getSemesters,
 } from "@/lib/calendar/calendar-service";
 import {
@@ -15,6 +16,7 @@ import {
 import { CalendarGrid } from "@/components/admin/CalendarGrid";
 import { CalendarCsvImport } from "@/components/admin/CalendarCsvImport";
 import { SemesterSettings } from "@/components/admin/SemesterSettings";
+import { YearOverviewGrid } from "@/components/admin/YearOverviewGrid";
 
 interface PageProps {
   searchParams: Promise<{ year?: string; month?: string }>;
@@ -30,9 +32,10 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
   const year = params.year ? Number(params.year) : currentYearJST();
   const month = params.month ? Number(params.month) : currentMonthJST();
 
-  const [entries, semesters] = await Promise.all([
+  const [entries, semesters, yearEntries] = await Promise.all([
     getSchoolCalendarMonth(year, month),
     getSemesters(year),
+    getSchoolCalendarYear(year),
   ]);
 
   return (
@@ -42,12 +45,17 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
       <Tabs defaultValue="calendar">
         <TabsList>
           <TabsTrigger value="calendar">カレンダー</TabsTrigger>
+          <TabsTrigger value="year">年間概要</TabsTrigger>
           <TabsTrigger value="semester">学期設定</TabsTrigger>
           <TabsTrigger value="csv">CSVインポート</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="mt-4">
           <CalendarGrid entries={entries} year={year} month={month} />
+        </TabsContent>
+
+        <TabsContent value="year" className="mt-4">
+          <YearOverviewGrid entries={yearEntries} year={year} />
         </TabsContent>
 
         <TabsContent value="semester" className="mt-4">

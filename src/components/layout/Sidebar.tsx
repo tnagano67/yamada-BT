@@ -8,15 +8,19 @@ import {
   Users,
   Calendar,
   BarChart3,
-  Settings,
   BookOpen,
   Bell,
+  GraduationCap,
+  ListChecks,
+  CheckCircle2,
 } from "lucide-react";
+import type { SetupStatus } from "@/lib/admin/setup-service";
 
 interface SidebarItem {
   href: string;
   label: string;
   icon: React.ElementType;
+  completed?: boolean;
 }
 
 const teacherItems: SidebarItem[] = [
@@ -27,20 +31,40 @@ const teacherItems: SidebarItem[] = [
   { href: "/teacher/alerts", label: "アラート", icon: Bell },
 ];
 
-const adminItems: SidebarItem[] = [
-  { href: "/admin/school", label: "学校管理", icon: Settings },
-  { href: "/admin/teachers", label: "教員管理", icon: Users },
-  { href: "/admin/classes", label: "クラス管理", icon: BookOpen },
-  { href: "/admin/calendar", label: "カレンダー", icon: Calendar },
-];
+function getAdminItems(setupStatus?: SetupStatus): SidebarItem[] {
+  return [
+    { href: "/admin/setup", label: "年度初期設定", icon: ListChecks },
+    {
+      href: "/admin/teachers",
+      label: "教員管理",
+      icon: Users,
+      completed: setupStatus?.hasTeachers,
+    },
+    {
+      href: "/admin/classes",
+      label: "クラス管理",
+      icon: BookOpen,
+      completed: setupStatus?.hasClasses,
+    },
+    {
+      href: "/admin/students",
+      label: "生徒管理",
+      icon: GraduationCap,
+      completed: setupStatus?.hasStudents,
+    },
+    { href: "/admin/calendar", label: "カレンダー", icon: Calendar },
+  ];
+}
 
 interface SidebarProps {
   variant: "teacher" | "admin";
+  setupStatus?: SetupStatus;
 }
 
-export function Sidebar({ variant }: SidebarProps) {
+export function Sidebar({ variant, setupStatus }: SidebarProps) {
   const pathname = usePathname();
-  const items = variant === "admin" ? adminItems : teacherItems;
+  const items =
+    variant === "admin" ? getAdminItems(setupStatus) : teacherItems;
 
   return (
     <nav className="flex flex-col gap-1 p-4">
@@ -60,6 +84,9 @@ export function Sidebar({ variant }: SidebarProps) {
           >
             <Icon className="h-4 w-4" />
             {item.label}
+            {item.completed && (
+              <CheckCircle2 className="ml-auto h-4 w-4 text-teal-600" />
+            )}
           </Link>
         );
       })}

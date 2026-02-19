@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth/auth";
 import { isAdmin } from "@/lib/auth/roles";
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db/prisma";
 import type { DayType } from "@/generated/prisma/client";
 import {
   upsertCalendarDay,
@@ -132,5 +133,52 @@ export async function generateWeekendsAction(
     return { success: true, count };
   } catch {
     return { success: false, error: "生成に失敗しました" };
+  }
+}
+
+/**
+ * 授業日に朝テストを一括設定する
+ */
+export async function bulkSetMorningTestAction(
+  formData: FormData,
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  const session = await auth();
+  if (!session?.user || !isAdmin(session.user.role)) {
+    return { success: false, error: "権限がありません" };
+  }
+
+  try {
+    const year = Number(formData.get("year"));
+    const month = formData.get("month")
+      ? Number(formData.get("month"))
+      : undefined;
+
+    let startDate: Date;
+    let endDate: Date;
+
+    if (month) {
+      startDate = new Date(Date.UTC(year, month - 1, 1));
+      endDate = new Date(Date.UTC(year, month, 0));
+    } else {
+      startDate = new Date(Date.UTC(year, 0, 1));
+      endDate = new Date(Date.UTC(year, 11, 31));
+    }
+
+    const result = await prisma.schoolCalendar.updateMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        dayType: "school_day",
+        hasMorningTest: false,
+      },
+      data: {
+        hasMorningTest: true,
+        streakRequired: true,
+      },
+    });
+
+    revalidatePath("/admin/calendar");
+    return { success: true, count: result.count };
+  } catch {
+    return { success: false, error: "設定に失敗しました" };
   }
 }

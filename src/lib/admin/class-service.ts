@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import type { ClassStudentStatus } from "@/generated/prisma/client";
-import type { StudentCsvRow } from "./csv-parser";
+import type { StudentCsvRow, ClassCsvRow } from "./csv-parser";
 
 export async function getClasses(academicYear: number) {
   return prisma.class.findMany({
@@ -11,6 +11,38 @@ export async function getClasses(academicYear: number) {
     },
     orderBy: [{ gradeYear: "asc" }, { className: "asc" }],
   });
+}
+
+export async function getClassesPaginated(
+  academicYear: number,
+  filter: { gradeYear?: number; search?: string },
+  skip: number,
+  take: number,
+) {
+  const where: Record<string, unknown> = { academicYear };
+  if (filter.gradeYear) where.gradeYear = filter.gradeYear;
+  if (filter.search) {
+    where.OR = [
+      { className: { contains: filter.search, mode: "insensitive" } },
+      { homeroomTeacher: { name: { contains: filter.search, mode: "insensitive" } } },
+    ];
+  }
+
+  const [classes, totalCount] = await Promise.all([
+    prisma.class.findMany({
+      where,
+      include: {
+        homeroomTeacher: { select: { id: true, name: true } },
+        _count: { select: { classStudents: true } },
+      },
+      orderBy: [{ gradeYear: "asc" }, { className: "asc" }],
+      skip,
+      take,
+    }),
+    prisma.class.count({ where }),
+  ]);
+
+  return { classes, totalCount };
 }
 
 export async function createClass(data: {
@@ -44,7 +76,17 @@ export async function getStudentsByClass(classId: string) {
   return prisma.classStudent.findMany({
     where: { classId },
     include: {
-      student: { select: { id: true, name: true, nameKana: true, email: true } },
+      student: {
+        select: {
+          id: true,
+          name: true,
+          nameKana: true,
+          email: true,
+          studentGrades: {
+            select: { subject: true, currentGradeId: true },
+          },
+        },
+      },
     },
     orderBy: { studentNumber: "asc" },
   });
@@ -131,4 +173,67 @@ export async function updateStudentStatus(
   });
 }
 
+export async function importClassesFromCsv(
+  rows: ClassCsvRow[],
+  academicYear: number,
+): Promise<{ imported: number; errors: { line: number; message: string }[] }> {
+  let imported = 0;
+  const errors: { line: number; message: string }[] = [];
 
+  await prisma.$transaction(async (tx) => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNumber = i + 1;
+
+      try {
+        let homeroomTeacherId: string | null = null;
+
+        if (row.homeroomEmail) {
+          const teacher = await tx.user.findUnique({
+            where: { email: row.homeroomEmail },
+          });
+          if (!teacher) {
+            errors.push({
+              line: lineNumber,
+              message: `担任のメールアドレスが見つかりません: "${row.homeroomEmail}"`,
+            });
+            continue;
+          }
+          if (teacher.role === "student") {
+            errors.push({
+              line: lineNumber,
+              message: `指定されたユーザーは生徒です: "${row.homeroomEmail}"`,
+            });
+            continue;
+          }
+          homeroomTeacherId = teacher.id;
+        }
+
+        await tx.class.upsert({
+          where: {
+            academicYear_gradeYear_className: {
+              academicYear,
+              gradeYear: row.gradeYear,
+              className: row.className,
+            },
+          },
+          update: { homeroomTeacherId },
+          create: {
+            academicYear,
+            gradeYear: row.gradeYear,
+            className: row.className,
+            homeroomTeacherId,
+          },
+        });
+        imported++;
+      } catch (e) {
+        errors.push({
+          line: lineNumber,
+          message: e instanceof Error ? e.message : "不明なエラー",
+        });
+      }
+    }
+  });
+
+  return { imported, errors };
+}

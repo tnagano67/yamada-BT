@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getStudentsByClass } from "@/lib/admin/class-service";
 import { StudentList } from "@/components/admin/StudentList";
 import { StudentCsvImport } from "@/components/admin/StudentCsvImport";
+import { AddStudentToClassDialog } from "@/components/admin/AddStudentToClassDialog";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -55,10 +56,13 @@ export default async function AdminClassDetailPage({
                 : ""}
             </p>
           </div>
-          <StudentCsvImport academicYear={cls.academicYear} />
+          <div className="flex items-center gap-2">
+            <AddStudentToClassDialog classId={classId} />
+            <StudentCsvImport academicYear={cls.academicYear} />
+          </div>
         </div>
       </div>
-      <StudentList students={students} />
+      <StudentList students={students} classId={classId} />
     </div>
   );
 }

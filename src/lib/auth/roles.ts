@@ -40,7 +40,7 @@ export function getRoleLabel(role: UserRole): string {
 export function getDefaultRedirect(role: UserRole): string {
   switch (role) {
     case "admin":
-      return "/admin/school";
+      return "/admin/setup";
     case "subject_lead":
     case "teacher":
       return "/teacher/dashboard";

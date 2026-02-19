@@ -175,6 +175,26 @@ export async function getCurrentSemester(): Promise<Semester | null> {
 }
 
 /**
+ * 指定年の学校カレンダーを全月分取得する（年間概要用）
+ */
+export async function getSchoolCalendarYear(
+  year: number,
+): Promise<SchoolCalendar[]> {
+  const startDate = new Date(Date.UTC(year, 0, 1));
+  const endDate = new Date(Date.UTC(year, 11, 31));
+
+  return prisma.schoolCalendar.findMany({
+    where: {
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    orderBy: { date: "asc" },
+  });
+}
+
+/**
  * 指定年の土日エントリーを一括生成する
  */
 export async function generateWeekendEntries(year: number): Promise<number> {

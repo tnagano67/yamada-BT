@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
         // Redirect to appropriate dashboard based on actual role
         const redirectPath =
           userRole === "admin"
-            ? "/admin/school"
+            ? "/admin/setup"
             : userRole === "teacher" || userRole === "subject_lead"
               ? "/teacher/dashboard"
               : "/student/dashboard";

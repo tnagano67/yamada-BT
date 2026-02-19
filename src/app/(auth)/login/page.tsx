@@ -22,7 +22,7 @@ export default async function LoginPage() {
 
   if (session?.user) {
     const role = session.user.role;
-    if (role === "admin") redirect("/admin/school");
+    if (role === "admin") redirect("/admin/setup");
     if (role === "teacher" || role === "subject_lead")
       redirect("/teacher/dashboard");
     redirect("/student/dashboard");

@@ -78,6 +78,6 @@ describe("getDefaultRedirect", () => {
     expect(getDefaultRedirect("student")).toBe("/student/dashboard");
     expect(getDefaultRedirect("teacher")).toBe("/teacher/dashboard");
     expect(getDefaultRedirect("subject_lead")).toBe("/teacher/dashboard");
-    expect(getDefaultRedirect("admin")).toBe("/admin/school");
+    expect(getDefaultRedirect("admin")).toBe("/admin/setup");
   });
 });

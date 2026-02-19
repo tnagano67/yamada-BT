@@ -17,7 +17,7 @@ describe("canAccessRoute", () => {
     });
 
     it("/admin/* にアクセス不可", () => {
-      expect(canAccessRoute(role, "/admin/school")).toBe(false);
+      expect(canAccessRoute(role, "/admin/setup")).toBe(false);
       expect(canAccessRoute(role, "/admin/classes")).toBe(false);
     });
   });
@@ -35,7 +35,7 @@ describe("canAccessRoute", () => {
     });
 
     it("/admin/* にアクセス不可", () => {
-      expect(canAccessRoute(role, "/admin/school")).toBe(false);
+      expect(canAccessRoute(role, "/admin/setup")).toBe(false);
     });
   });
 
@@ -51,7 +51,7 @@ describe("canAccessRoute", () => {
     });
 
     it("/admin/* にアクセス不可", () => {
-      expect(canAccessRoute(role, "/admin/school")).toBe(false);
+      expect(canAccessRoute(role, "/admin/setup")).toBe(false);
     });
   });
 
@@ -67,7 +67,7 @@ describe("canAccessRoute", () => {
     });
 
     it("/admin/* にアクセス可", () => {
-      expect(canAccessRoute(role, "/admin/school")).toBe(true);
+      expect(canAccessRoute(role, "/admin/setup")).toBe(true);
       expect(canAccessRoute(role, "/admin/teachers")).toBe(true);
       expect(canAccessRoute(role, "/admin/classes")).toBe(true);
       expect(canAccessRoute(role, "/admin/calendar")).toBe(true);

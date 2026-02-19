@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { SchoolCalendar, DayType } from "@/generated/prisma/client";
-import { updateCalendarDayAction } from "@/app/(admin)/admin/calendar/actions";
+import {
+  updateCalendarDayAction,
+  bulkSetMorningTestAction,
+} from "@/app/(admin)/admin/calendar/actions";
+import { toast } from "sonner";
 
 interface CalendarGridProps {
   entries: SchoolCalendar[];
@@ -59,6 +63,7 @@ interface EditState {
 export function CalendarGrid({ entries, year, month }: CalendarGridProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isBulkPending, startBulkTransition] = useTransition();
   const [editDialog, setEditDialog] = useState<EditState | null>(null);
 
   const entryMap = new Map<number, SchoolCalendar>();
@@ -104,6 +109,23 @@ export function CalendarGrid({ entries, year, month }: CalendarGridProps) {
       await updateCalendarDayAction(formData);
       setEditDialog(null);
       router.refresh();
+    });
+  }
+
+  function handleBulkMorningTest() {
+    startBulkTransition(async () => {
+      const formData = new FormData();
+      formData.set("year", String(year));
+      formData.set("month", String(month));
+      const result = await bulkSetMorningTestAction(formData);
+      if (result.success) {
+        toast.success(
+          `${result.count}件の授業日に朝テストを設定しました`,
+        );
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "設定に失敗しました");
+      }
     });
   }
 
@@ -197,6 +219,20 @@ export function CalendarGrid({ entries, year, month }: CalendarGridProps) {
                 <span className="text-muted-foreground text-xs">{label}</span>
               </div>
             ))}
+          </div>
+
+          {/* Bulk morning test button */}
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkPending}
+              onClick={handleBulkMorningTest}
+            >
+              {isBulkPending
+                ? "設定中..."
+                : "朝テスト一括設定（今月の授業日）"}
+            </Button>
           </div>
         </CardContent>
       </Card>

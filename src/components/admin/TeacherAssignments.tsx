@@ -9,6 +9,7 @@ import {
   removeAssignmentAction,
   getTeacherAssignmentsAction,
 } from "@/app/(admin)/admin/teachers/actions";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 interface Assignment {
   id: string;
@@ -64,7 +65,6 @@ export function TeacherAssignments({
   }, [loadAssignments]);
 
   async function handleRemove(assignmentId: string) {
-    if (!confirm("この担当を削除しますか？")) return;
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -137,14 +137,17 @@ export function TeacherAssignments({
                   </Badge>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={submitting}
-                onClick={() => handleRemove(a.id)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+              <DeleteConfirmDialog
+                title="担当を削除"
+                description="この担当を削除しますか？"
+                trigger={
+                  <Button variant="ghost" size="sm" disabled={submitting}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                }
+                onConfirm={() => handleRemove(a.id)}
+                isPending={submitting}
+              />
             </div>
           ))}
         </div>
