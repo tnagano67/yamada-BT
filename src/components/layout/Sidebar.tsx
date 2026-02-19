@@ -13,6 +13,8 @@ import {
   GraduationCap,
   ListChecks,
   CheckCircle2,
+  Layers,
+  BookA,
 } from "lucide-react";
 import type { SetupStatus } from "@/lib/admin/setup-service";
 
@@ -52,6 +54,8 @@ function getAdminItems(setupStatus?: SetupStatus): SidebarItem[] {
       icon: GraduationCap,
       completed: setupStatus?.hasStudents,
     },
+    { href: "/admin/grades", label: "グレード管理", icon: Layers },
+    { href: "/admin/words", label: "単語管理", icon: BookA },
     { href: "/admin/calendar", label: "カレンダー", icon: Calendar },
   ];
 }
